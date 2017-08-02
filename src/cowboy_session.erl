@@ -86,22 +86,18 @@ init([]) ->
 
 get_session(Req) ->
 	Cookie_name = ?CONFIG(cookie_name),
-	{SID, Req2} = case cowboy_req:meta(Cookie_name, Req) of
-		{undefined, Req3} ->
-			cowboy_req:cookie(Cookie_name, Req3);
-		Result ->
-			Result
-	end,
+        Cookies = cowboy_req:parse_cookies(Req),
+        { _, SID} = lists:keyfind(Cookie_name, 1, Cookies),
 	case SID of
 		undefined ->
-			create_session(Req2);
+			create_session(Req);
 		_ ->
 			case gproc:lookup_local_name({cowboy_session, SID}) of
 				undefined ->
-					create_session(Req2);
+					create_session(Req);
 				Pid ->
 					cowboy_session_server:touch(Pid),
-					{Pid, Req2}
+					{Pid, Req}
 			end
 	end.
 
@@ -128,9 +124,8 @@ create_session(Req) ->
 		{storage, Storage},
 		{expire, Expire}
 	]]),
-	Req2 = cowboy_req:set_resp_cookie(Cookie_name, SID, Cookie_options, Req),
-	Req3 = cowboy_req:set_meta(Cookie_name, SID, Req2),
-	{Pid, Req3}.
+	Req2 = cowboy_req:set_resp_cookie(Cookie_name, SID, Req, Cookie_options),
+	{Pid, Req2}.
 
 ensure_started([]) -> ok;
 ensure_started([App | Rest] = Apps) ->

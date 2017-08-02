@@ -22,7 +22,7 @@
 
 -define(DEFAULT, [
 	{cookie_name, <<"session">>},
-	{cookie_options, [{path, <<"/">>}]},
+	{cookie_options, #{path => <<"/">>}},
 	{expire, 1440},
 	{storage, cowboy_session_storage_ets}
 ]).
