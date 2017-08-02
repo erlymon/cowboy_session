@@ -103,13 +103,15 @@ get_session(Req) ->
 
 clear_cookie(Req) ->
 	Cookie_name = ?CONFIG(cookie_name),
-	Cookie_options = ?CONFIG(cookie_options),
-	Req2 = cowboy_req:set_meta(Cookie_name, undefined, Req),
+        %% TODO:
+        %% Delete Cookie options
+	%Cookie_options = ?CONFIG(cookie_options),
+        %Req2 = cowboy_req:set_resp_cookie(Cookie_name, undefined, Req),
 	cowboy_req:set_resp_cookie(
 		Cookie_name,
 		<<"deleted">>,
-		[{set_age, 0}, {local_time, {{1970, 1, 1}, {0, 0, 0}}} | Cookie_options],
-		Req2).
+                Req
+                #{max_age => 0}).
 
 create_session(Req) ->
 	%% The cookie value cannot contain any of the following characters:
