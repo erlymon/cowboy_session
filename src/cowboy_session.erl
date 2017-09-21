@@ -86,19 +86,40 @@ init([]) ->
 
 get_session(Req) ->
 	Cookie_name = ?CONFIG(cookie_name),
-        Cookies = cowboy_req:parse_cookies(Req),
-        { _, SID} = lists:keyfind(Cookie_name, 1, Cookies),
-	case SID of
-		undefined ->
-			create_session(Req);
-		_ ->
-			case gproc:lookup_local_name({cowboy_session, SID}) of
-				undefined ->
-					create_session(Req);
-				Pid ->
-					cowboy_session_server:touch(Pid),
-					{Pid, Req}
-			end
+	CreateSessionFun = fun(SID, Req) ->
+		case SID of
+			undefined ->
+				create_session(Req);
+			_ ->
+				case gproc:lookup_local_name({cowboy_session, SID}) of
+					undefined ->
+						create_session(Req);
+					Pid ->
+						cowboy_session_server:touch(Pid),
+						{Pid, Req}
+				end
+		end
+	end,
+	try cowboy_req:match_cookies([binary_to_atom(Cookie_name, utf8)], Req) of
+		 #{session := Sessions} ->
+			 case is_list(Sessions) of
+				 true ->
+					 io:format("#### Sessions = ~w~n", [Sessions]),
+					 case lists:filter(fun(Elem) -> Elem /= <<"deleted">> end,  Sessions) of
+					  [] ->
+							create_session(Req);
+						[SID|_] ->
+							CreateSessionFun(SID, Req)
+					 end;
+				 false ->
+					 CreateSessionFun(Sessions, Req)
+			end;
+		 _ ->
+			create_session(Req)
+	catch
+		throw:_ -> create_session(Req);
+		error:_ -> create_session(Req);
+		exit:_ -> create_session(Req)
 	end.
 
 clear_cookie(Req) ->
